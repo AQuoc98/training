@@ -66,7 +66,7 @@ app.get("/process-words", async (req, res) => {
         const capitalizedText = capitalizeVietnamese(text);
         filteredData.push({
           text: capitalizedText,
-          picked: "false",
+          picked: false,
         });
       }
     }
