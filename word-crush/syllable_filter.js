@@ -18,6 +18,18 @@ const removeInvalidWords = (data) => {
   return data.filter((item) => isValidWord(item.text || ""));
 };
 
+// Function to remove duplicate texts based on the text property
+const removeDuplicates = (data) => {
+  const uniqueTexts = new Set();
+  return data.filter(item => {
+    if (uniqueTexts.has(item.text)) {
+      return false;
+    }
+    uniqueTexts.add(item.text);
+    return true;
+  });
+};
+
 // Function to count syllables in Vietnamese words
 const countSyllablesVietnamese = (word) => {
   const parts = word.split(" ").filter((part) => part); // Remove empty parts
@@ -57,6 +69,9 @@ app.get("/process-words", async (req, res) => {
 
     // Remove invalid words
     dataList = removeInvalidWords(dataList);
+
+    // Remove duplicate words
+    dataList = removeDuplicates(dataList);
 
     // Filter for 2-syllable words and capitalize
     for (const item of dataList) {
@@ -102,4 +117,23 @@ app.get("/process-words", async (req, res) => {
 // Start the server
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
+});
+
+// Endpoint to return just an array of text values
+app.get("/text-array", async (req, res) => {
+  try {
+    const outputFilePath = "filtered_output.json";
+    const fileContent = await fs.readFile(outputFilePath, "utf-8");
+    const data = JSON.parse(fileContent);
+    
+    const textArray = data.directoryVNData.map(item => item.text);
+    
+    res.json({
+      count: textArray.length,
+      texts: textArray
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to retrieve text array" });
+    console.error(error);
+  }
 });
