@@ -15,17 +15,17 @@ const isValidWord = (text) => {
 };
 
 const removeInvalidWords = (data) => {
-  return data.filter((item) => isValidWord(item.text || ""));
+  return data.filter((text) => isValidWord(text));
 };
 
-// Function to remove duplicate texts based on the text property
+// Function to remove duplicate texts
 const removeDuplicates = (data) => {
   const uniqueTexts = new Set();
-  return data.filter(item => {
-    if (uniqueTexts.has(item.text)) {
+  return data.filter((text) => {
+    if (uniqueTexts.has(text)) {
       return false;
     }
-    uniqueTexts.add(item.text);
+    uniqueTexts.add(text);
     return true;
   });
 };
@@ -36,13 +36,11 @@ const countSyllablesVietnamese = (word) => {
   return parts.length;
 };
 
-// Function to capitalize Vietnamese words
-const capitalizeVietnamese = (word) => {
+// Function to lowercase Vietnamese words
+const lowercaseVietnamese = (word) => {
   const parts = word.split(" ");
-  const capitalizedParts = parts.map(
-    (part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
-  );
-  return capitalizedParts.join(" ");
+  const lowercaseParts = parts.map((part) => part.toLowerCase());
+  return lowercaseParts.join(" ");
 };
 
 // API endpoint to process the input file
@@ -60,8 +58,8 @@ app.get("/process-words", async (req, res) => {
     // Parse each line as JSON
     for (const line of lines) {
       try {
-        const item = JSON.parse(line);
-        dataList.push(item);
+        const parsedItem = JSON.parse(line);
+        dataList.push(parsedItem.text);
       } catch (error) {
         console.error(`Error parsing line: ${line}`);
       }
@@ -74,15 +72,11 @@ app.get("/process-words", async (req, res) => {
     dataList = removeDuplicates(dataList);
 
     // Filter for 2-syllable words and capitalize
-    for (const item of dataList) {
-      const text = item.text;
+    for (const text of dataList) {
       const syllableCount = countSyllablesVietnamese(text);
       if (syllableCount === 2) {
-        const capitalizedText = capitalizeVietnamese(text);
-        filteredData.push({
-          text: capitalizedText,
-          picked: false,
-        });
+        const lowercasedText = lowercaseVietnamese(text);
+        filteredData.push(lowercasedText);
       }
     }
 
@@ -123,14 +117,32 @@ app.listen(port, () => {
 app.get("/text-array", async (req, res) => {
   try {
     const outputFilePath = "filtered_output.json";
+    const exportFilePath = "text_array.json";
     const fileContent = await fs.readFile(outputFilePath, "utf-8");
     const data = JSON.parse(fileContent);
     
-    const textArray = data.directoryVNData.map(item => item.text);
+    const textArray = data.directoryVNData;
     
-    res.json({
+    // Create the export data
+    const exportData = {
       count: textArray.length,
-      texts: textArray
+      texts: textArray,
+    };
+    
+    // Write to export file
+    await fs.writeFile(
+      exportFilePath,
+      JSON.stringify(exportData, null, 4),
+      "utf-8"
+    );
+    console.log(`Exported text array JSON file successfully to: ${exportFilePath}`);
+    
+    // Send response
+    res.json({
+      message: "Text array exported successfully",
+      filePath: exportFilePath,
+      count: textArray.length,
+      texts: textArray,
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to retrieve text array" });
